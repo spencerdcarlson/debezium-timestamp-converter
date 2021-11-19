@@ -61,6 +61,29 @@ public class TimestampConverterTests {
     }
 
     @Test
+    void convertDateTimestamp() {
+        final String columnType = "timestamp";
+        final String format = "yyyy-MM-dd HH:mm:ss.SSSSSS";
+        final String input = "2021-11-19 15:25:53.919906";
+        final String expectedResult = "2021-11-19 15:25:53.919906";
+
+        final Properties props = new Properties();
+        props.putAll(Map.of(String.format("format.%s", "datetime"),format, "debug", "true"));
+
+        final TimestampConverter tsConverter = new TimestampConverter();
+        tsConverter.configure(props);
+
+        final RelationalColumn mockColumn = getMockColumn(columnType);
+        final MockRegistration<SchemaBuilder> mockRegistration = new MockRegistration<>();
+
+        tsConverter.converterFor(mockColumn, mockRegistration);
+
+        final Object actualResult = mockRegistration._converter.convert(input);
+
+        assertEquals(expectedResult, actualResult);
+    }
+
+    @Test
     void converterDate() {
         final String columnType = "date";
         final String format = "YYYY-MM-dd";

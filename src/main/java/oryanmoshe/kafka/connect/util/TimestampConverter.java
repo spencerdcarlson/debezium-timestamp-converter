@@ -16,18 +16,15 @@ import java.util.regex.Pattern;
 
 public class TimestampConverter implements CustomConverter<SchemaBuilder, RelationalColumn> {
 
+    public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+    public static final String DEFAULT_DATE_FORMAT = "YYYY-MM-dd";
+    public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss.SSS";
+    public static final List<String> SUPPORTED_DATA_TYPES = List.of("date", "time", "datetime", "timestamp",
+            "datetime2");
     private static final Map<String, String> MONTH_MAP = Map.ofEntries(Map.entry("jan", "01"), Map.entry("feb", "02"),
             Map.entry("mar", "03"), Map.entry("apr", "04"), Map.entry("may", "05"), Map.entry("jun", "06"),
             Map.entry("jul", "07"), Map.entry("aug", "08"), Map.entry("sep", "09"), Map.entry("oct", "10"),
             Map.entry("nov", "11"), Map.entry("dec", "12"));
-
-    public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
-    public static final String DEFAULT_DATE_FORMAT = "YYYY-MM-dd";
-    public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss.SSS";
-
-    public static final List<String> SUPPORTED_DATA_TYPES = List.of("date", "time", "datetime", "timestamp",
-            "datetime2");
-
     private static final Pattern dateTimeRegex = Pattern.compile("(?<datetime>(?<date>(?:(?<year>\\d{4})-(?<month>\\d{1,2})-(?<day>\\d{1,2}))|(?:(?<day2>\\d{1,2})\\/(?<month2>\\d{1,2})\\/(?<year2>\\d{4}))|(?:(?<day3>\\d{1,2})-(?<month3>\\w{3})-(?<year3>\\d{4})))?(?:\\s?T?(?<time>(?<hour>\\d{1,2}):(?<minute>\\d{1,2}):(?<second>\\d{1,2})\\.?(?<milli>\\d{0,7})?)?))");
     private static final Pattern numberRegex = Pattern.compile("\\d+");
 
@@ -77,56 +74,67 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
             final SchemaBuilder builder = column.isOptional() ? SchemaBuilder.string().optional() : SchemaBuilder.string().required();
             registration.register(builder, rawValue -> {
                 if (rawValue == null) {
-                    if (this.debug) { System.out.printf("[TimestampConverter.converterFor] rawValue of %s is null.%n", column.name()); }
+                    if (this.debug) {
+                        System.out.printf("[TimestampConverter.converterFor] rawValue of %s is null.%n", column.name());
+                    }
                     return fallback(column);
                 }
-                if (rawValue instanceof String){
-                    final String value = (String)rawValue;
+                final String value = rawValue.toString();
 
-                    if (this.debug) { System.out.println("[TimestampConverter.converterFor] value: " + value); }
-                    final Instant instant;
-                    if (isIsoString(value)) {
-                        instant = parseIsoString(value);
-                    }
-                    else if (isTime) {
-                        instant = parseTime(value);
-                    }
-                    else {
-                        instant = parseEpoch(value);
-                    }
-                    if (instant == null) { return rawValue.toString(); }
-                    if (this.debug) { System.out.println("[TimestampConverter.converterFor] instant: " + instant); }
-                    if (this.debug) {
-                        System.out.printf(
-                                "[TimestampConverter.converterFor] Before returning conversion. column.name: %s, column.typeName: %s%n",
-                                column.name(), column.typeName());
-                    }
-                    switch (column.typeName().toLowerCase()) {
-                        case "time":
-                            if (this.debug) { System.out.println("Using timeFormatter"); }
-                            return this.timeFormatter.format(instant);
-                        case "date":
-                            if (this.debug) { System.out.println("Using dateFormatter"); }
-                            return this.dateFormatter.format(instant);
-                        default:
-                            if (this.debug) { System.out.println("Using dateTimeFormatter"); }
-                            return this.dateTimeFormatter.format(instant);
-                    }
+                if (this.debug) {
+                    System.out.println("[TimestampConverter.converterFor] value: " + value);
                 }
-                if (this.debug) { System.out.printf("[TimestampConverter.converterFor] rawValue of %s is not a String.%n", column.name()); }
-                return fallback(column);
+                final Instant instant;
+                if (isIsoString(value)) {
+                    instant = parseIsoString(value);
+                } else if (isTime) {
+                    instant = parseTime(value);
+                } else {
+                    instant = parseEpoch(value);
+                }
+                if (instant == null) {
+                    return rawValue.toString();
+                }
+                if (this.debug) {
+                    System.out.println("[TimestampConverter.converterFor] instant: " + instant);
+                }
+                if (this.debug) {
+                    System.out.printf(
+                            "[TimestampConverter.converterFor] Before returning conversion. column.name: %s, column.typeName: %s%n",
+                            column.name(), column.typeName());
+                }
+                switch (column.typeName().toLowerCase()) {
+                    case "time":
+                        if (this.debug) {
+                            System.out.println("Using timeFormatter");
+                        }
+                        return this.timeFormatter.format(instant);
+                    case "date":
+                        if (this.debug) {
+                            System.out.println("Using dateFormatter");
+                        }
+                        return this.dateFormatter.format(instant);
+                    default:
+                        if (this.debug) {
+                            System.out.println("Using dateTimeFormatter");
+                        }
+                        return this.dateTimeFormatter.format(instant);
+                }
             });
         }
     }
 
     private Object fallback(final RelationalColumn column) {
-        if (column.isOptional()) { return null; }
-        else if (column.hasDefaultValue()) { return column.defaultValue(); }
-        return  null;
+        if (column.isOptional()) {
+            return null;
+        } else if (column.hasDefaultValue()) {
+            return column.defaultValue();
+        }
+        return null;
     }
 
     private Instant parseTime(final String timestamp) {
-        long epoch = Long.parseLong(timestamp.replaceAll("\\D+",""));
+        long epoch = Long.parseLong(timestamp.replaceAll("\\D+", ""));
         // FIXME: This does not support microseconds.
         return Instant.ofEpochMilli(epoch);
     }
@@ -135,22 +143,23 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
         if (this.debug) {
             System.out.printf("[TimestampConverter.parseToEpoch] %-7s: %-8s%n", "Before", datetime);
         }
-        if (datetime == null || datetime.isBlank() || !isEpoch(datetime)) { return null; }
+        if (datetime == null || datetime.isBlank() || !isEpoch(datetime)) {
+            return null;
+        }
         if (this.debug) {
             System.out.printf("[TimestampConverter.parseToEpoch] %-7s: %-8d%n", "After!", Long.parseLong(datetime));
         }
         long epoch = Long.parseLong(datetime);
         if (datetime.length() < 6) {
             return Instant.EPOCH.plus(epoch, ChronoUnit.DAYS);
-        }
-        else if (datetime.length() < 14) {
+        } else if (datetime.length() < 14) {
             return Instant.EPOCH.plus(epoch, ChronoUnit.MILLIS);
         }
         return Instant.EPOCH.plus(epoch, ChronoUnit.MICROS);
     }
 
     private Instant parseIsoString(final String isoString) {
-        final String  normalized = normalizeIso(isoString);
+        final String normalized = normalizeIso(isoString);
         if (normalized == null) {
             return null;
         }
