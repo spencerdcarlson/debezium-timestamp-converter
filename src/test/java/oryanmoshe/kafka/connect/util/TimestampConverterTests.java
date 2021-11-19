@@ -4,9 +4,6 @@ import io.debezium.spi.converter.CustomConverter.Converter;
 import io.debezium.spi.converter.CustomConverter.ConverterRegistration;
 import io.debezium.spi.converter.RelationalColumn;
 import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -18,11 +15,6 @@ import java.util.Properties;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TimestampConverterTests {
-    @BeforeAll
-    public static void beforeAllTests(){
-        Configurator.setLevel("oryanmoshe.kafka.connect.util", Level.DEBUG);
-    }
-
     @Test
     void converterDateTimeStampTest() {
         final String columnType = "timestamp";

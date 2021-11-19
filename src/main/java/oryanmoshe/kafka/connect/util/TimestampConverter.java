@@ -13,12 +13,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TimestampConverter implements CustomConverter<SchemaBuilder, RelationalColumn> {
 
-    private static final Logger logger = LogManager.getLogger(TimestampConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TimestampConverter.class);
+
 
     public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
     public static final String DEFAULT_DATE_FORMAT = "YYYY-MM-dd";
@@ -40,7 +41,7 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
 
     @Override
     public void configure(Properties props) {
-        logger.debug("configure properties");
+        LOGGER.debug("configure properties");
         this.dateTimePattern = props.getProperty("format.datetime", DEFAULT_DATETIME_FORMAT);
         this.dateTimeFormatter = DateTimeFormatter.ofPattern(this.dateTimePattern).withZone(ZoneOffset.UTC);
 
@@ -50,14 +51,14 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
         this.timePattern = props.getProperty("format.time", DEFAULT_TIME_FORMAT);
         this.timeFormatter = DateTimeFormatter.ofPattern(this.timePattern).withZone(ZoneOffset.UTC);
 
-        logger.debug("dateTimePattern: {}, datePattern: {}, timePattern: {}", this.dateTimePattern, this.datePattern, this.timePattern);
+        LOGGER.debug("dateTimePattern: {}, datePattern: {}, timePattern: {}", this.dateTimePattern, this.datePattern, this.timePattern);
     }
 
     @Override
     public void converterFor(RelationalColumn column, ConverterRegistration<SchemaBuilder> registration) {
-        logger.debug("[column] name: {}, type name: {}, has default value: {}, default value: {}, is optional: {}", column.name(), column.typeName(), column.hasDefaultValue(), column.defaultValue(), column.isOptional());
+        LOGGER.debug("[column] name: {}, type name: {}, has default value: {}, default value: {}, is optional: {}", column.name(), column.typeName(), column.hasDefaultValue(), column.defaultValue(), column.isOptional());
         if (SUPPORTED_DATA_TYPES.stream().anyMatch(s -> s.equalsIgnoreCase(column.typeName()))) {
-            logger.debug("registering column for conversion. typeName: {}", column.typeName());
+            LOGGER.debug("registering column for conversion. typeName: {}", column.typeName());
             // NOTE SUPPORTED_DATA_TYPES decides which types will get converted. We could augment the logic
             // here to just look for a list of column names e.g. "inserted_at", "updated_at", etc
 
@@ -69,12 +70,12 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
             final SchemaBuilder builder = column.isOptional() ? SchemaBuilder.string().optional() : SchemaBuilder.string().required();
             registration.register(builder, rawValue -> {
                 if (rawValue == null) {
-                    logger.debug("value of {} is null", column.name());
+                    LOGGER.debug("value of {} is null", column.name());
                     return fallback(column);
                 }
                 final String value = rawValue.toString();
 
-                logger.debug("value: {}", value);
+                LOGGER.debug("value: {}", value);
 
                 final Instant instant;
                 if (isIsoString(value)) {
@@ -87,16 +88,16 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
                 if (instant == null) {
                     return rawValue.toString();
                 }
-                logger.debug("instant: {}", instant);
+                LOGGER.debug("instant: {}", instant);
                 switch (column.typeName().toLowerCase()) {
                     case "time":
-                        logger.debug("using time formatter. {}", this.timePattern);
+                        LOGGER.debug("using time formatter. {}", this.timePattern);
                         return this.timeFormatter.format(instant);
                     case "date":
-                        logger.debug("using date formatter. {}", this.datePattern);
+                        LOGGER.debug("using date formatter. {}", this.datePattern);
                         return this.dateFormatter.format(instant);
                     default:
-                        logger.debug("using datetime formatter. {}", this.dateTimePattern);
+                        LOGGER.debug("using datetime formatter. {}", this.dateTimePattern);
                         return this.dateTimeFormatter.format(instant);
                 }
             });
@@ -119,20 +120,20 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
     }
 
     private Instant parseEpoch(final String datetime) {
-        logger.debug("parsing epoch. datetime: {}", datetime);
+        LOGGER.debug("parsing epoch. datetime: {}", datetime);
         if (datetime == null || datetime.isBlank() || !isEpoch(datetime)) {
             return null;
         }
         long epoch = Long.parseLong(datetime);
-        logger.debug("parsed epoch. epoch: {}", epoch);
+        LOGGER.debug("parsed epoch. epoch: {}", epoch);
         if (datetime.length() < 6) {
-            logger.debug("convert using days");
+            LOGGER.debug("convert using days");
             return Instant.EPOCH.plus(epoch, ChronoUnit.DAYS);
         } else if (datetime.length() < 14) {
-            logger.debug("convert using milliseconds");
+            LOGGER.debug("convert using milliseconds");
             return Instant.EPOCH.plus(epoch, ChronoUnit.MILLIS);
         }
-        logger.debug("convert using microseconds");
+        LOGGER.debug("convert using microseconds");
         return Instant.EPOCH.plus(epoch, ChronoUnit.MICROS);
     }
 
