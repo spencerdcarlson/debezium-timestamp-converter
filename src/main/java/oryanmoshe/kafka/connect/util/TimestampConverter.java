@@ -13,8 +13,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 public class TimestampConverter implements CustomConverter<SchemaBuilder, RelationalColumn> {
+
+    private static final Logger logger = LogManager.getLogger(TimestampConverter.class);
 
     public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
     public static final String DEFAULT_DATE_FORMAT = "YYYY-MM-dd";
@@ -28,8 +32,6 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
     private static final Pattern dateTimeRegex = Pattern.compile("(?<datetime>(?<date>(?:(?<year>\\d{4})-(?<month>\\d{1,2})-(?<day>\\d{1,2}))|(?:(?<day2>\\d{1,2})\\/(?<month2>\\d{1,2})\\/(?<year2>\\d{4}))|(?:(?<day3>\\d{1,2})-(?<month3>\\w{3})-(?<year3>\\d{4})))?(?:\\s?T?(?<time>(?<hour>\\d{1,2}):(?<minute>\\d{1,2}):(?<second>\\d{1,2})\\.?(?<milli>\\d{0,7})?)?))");
     private static final Pattern numberRegex = Pattern.compile("\\d+");
 
-    public Boolean debug;
-
     private DateTimeFormatter dateTimeFormatter;
     private DateTimeFormatter dateFormatter;
     private DateTimeFormatter timeFormatter;
@@ -38,6 +40,7 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
 
     @Override
     public void configure(Properties props) {
+        logger.debug("configure properties");
         this.dateTimePattern = props.getProperty("format.datetime", DEFAULT_DATETIME_FORMAT);
         this.dateTimeFormatter = DateTimeFormatter.ofPattern(this.dateTimePattern).withZone(ZoneOffset.UTC);
 
@@ -47,22 +50,14 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
         this.timePattern = props.getProperty("format.time", DEFAULT_TIME_FORMAT);
         this.timeFormatter = DateTimeFormatter.ofPattern(this.timePattern).withZone(ZoneOffset.UTC);
 
-        this.debug = props.getProperty("debug", "false").equals("true");
-
-        if (this.debug) {
-            System.out.printf(
-                    "[TimestampConverter.configure] dateTimeFormatter: %s, dateFormatter: %s, timeFormatter: %s%n",
-                    dateTimeFormatter, dateFormatter, timeFormatter);
-        }
+        logger.debug("dateTimePattern: {}, datePattern: {}, timePattern: {}", this.dateTimePattern, this.datePattern, this.timePattern);
     }
 
     @Override
     public void converterFor(RelationalColumn column, ConverterRegistration<SchemaBuilder> registration) {
-        if (this.debug)
-            System.out.printf(
-                    "[TimestampConverter.converterFor] Starting to register column. column.name: %s, column.typeName: %s, column.hasDefaultValue: %s, column.defaultValue: %s, column.isOptional: %s%n",
-                    column.name(), column.typeName(), column.hasDefaultValue(), column.defaultValue(), column.isOptional());
+        logger.debug("[column] name: {}, type name: {}, has default value: {}, default value: {}, is optional: {}", column.name(), column.typeName(), column.hasDefaultValue(), column.defaultValue(), column.isOptional());
         if (SUPPORTED_DATA_TYPES.stream().anyMatch(s -> s.equalsIgnoreCase(column.typeName()))) {
+            logger.debug("registering column for conversion. typeName: {}", column.typeName());
             // NOTE SUPPORTED_DATA_TYPES decides which types will get converted. We could augment the logic
             // here to just look for a list of column names e.g. "inserted_at", "updated_at", etc
 
@@ -74,16 +69,13 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
             final SchemaBuilder builder = column.isOptional() ? SchemaBuilder.string().optional() : SchemaBuilder.string().required();
             registration.register(builder, rawValue -> {
                 if (rawValue == null) {
-                    if (this.debug) {
-                        System.out.printf("[TimestampConverter.converterFor] rawValue of %s is null.%n", column.name());
-                    }
+                    logger.debug("value of {} is null", column.name());
                     return fallback(column);
                 }
                 final String value = rawValue.toString();
 
-                if (this.debug) {
-                    System.out.println("[TimestampConverter.converterFor] value: " + value);
-                }
+                logger.debug("value: {}", value);
+
                 final Instant instant;
                 if (isIsoString(value)) {
                     instant = parseIsoString(value);
@@ -95,29 +87,16 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
                 if (instant == null) {
                     return rawValue.toString();
                 }
-                if (this.debug) {
-                    System.out.println("[TimestampConverter.converterFor] instant: " + instant);
-                }
-                if (this.debug) {
-                    System.out.printf(
-                            "[TimestampConverter.converterFor] Before returning conversion. column.name: %s, column.typeName: %s%n",
-                            column.name(), column.typeName());
-                }
+                logger.debug("instant: {}", instant);
                 switch (column.typeName().toLowerCase()) {
                     case "time":
-                        if (this.debug) {
-                            System.out.println("Using timeFormatter");
-                        }
+                        logger.debug("using time formatter. {}", this.timePattern);
                         return this.timeFormatter.format(instant);
                     case "date":
-                        if (this.debug) {
-                            System.out.println("Using dateFormatter");
-                        }
+                        logger.debug("using date formatter. {}", this.datePattern);
                         return this.dateFormatter.format(instant);
                     default:
-                        if (this.debug) {
-                            System.out.println("Using dateTimeFormatter");
-                        }
+                        logger.debug("using datetime formatter. {}", this.dateTimePattern);
                         return this.dateTimeFormatter.format(instant);
                 }
             });
@@ -140,21 +119,20 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
     }
 
     private Instant parseEpoch(final String datetime) {
-        if (this.debug) {
-            System.out.printf("[TimestampConverter.parseToEpoch] %-7s: %-8s%n", "Before", datetime);
-        }
+        logger.debug("parsing epoch. datetime: {}", datetime);
         if (datetime == null || datetime.isBlank() || !isEpoch(datetime)) {
             return null;
         }
-        if (this.debug) {
-            System.out.printf("[TimestampConverter.parseToEpoch] %-7s: %-8d%n", "After!", Long.parseLong(datetime));
-        }
         long epoch = Long.parseLong(datetime);
+        logger.debug("parsed epoch. epoch: {}", epoch);
         if (datetime.length() < 6) {
+            logger.debug("convert using days");
             return Instant.EPOCH.plus(epoch, ChronoUnit.DAYS);
         } else if (datetime.length() < 14) {
+            logger.debug("convert using milliseconds");
             return Instant.EPOCH.plus(epoch, ChronoUnit.MILLIS);
         }
+        logger.debug("convert using microseconds");
         return Instant.EPOCH.plus(epoch, ChronoUnit.MICROS);
     }
 
