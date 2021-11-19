@@ -1,31 +1,20 @@
 package oryanmoshe.kafka.connect.util;
 
+import io.debezium.spi.converter.CustomConverter.Converter;
+import io.debezium.spi.converter.CustomConverter.ConverterRegistration;
+import io.debezium.spi.converter.RelationalColumn;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import io.debezium.spi.converter.RelationalColumn;
-import io.debezium.spi.converter.CustomConverter.Converter;
-import io.debezium.spi.converter.CustomConverter.ConverterRegistration;
-
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Properties;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TimestampConverterTests {
-    private static class MockRegistration<S> implements ConverterRegistration<S> {
-        public Converter _converter;
-        public S _schema;
-
-        @Override
-        public void register(S fieldSchema, Converter converter) {
-            _converter = converter;
-            _schema = fieldSchema;
-        }
-    }
-
     @Test
     void converterDateTimeStampTest() {
         final String columnType = "timestamp";
@@ -35,7 +24,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2021-11-18 04:09:44.795307";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"),format, "debug", "true"));
+        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -68,7 +57,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2021-11-19 15:25:53.919906";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"),format, "debug", "true"));
+        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -91,7 +80,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2020-04-16";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"),format, "debug", "true"));
+        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -124,7 +113,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2020-04-16";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"),format, "debug", "true"));
+        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -211,7 +200,7 @@ public class TimestampConverterTests {
     }
 
     @ParameterizedTest
-    @CsvSource({ "date, YYYY-MM-dd, 18368, 2020-04-16",
+    @CsvSource({"date, YYYY-MM-dd, 18368, 2020-04-16",
             "date,, 18368, 2020-04-16",
             "time, mm:ss.SSS, 2230, 00:02.230",
             "time,, 2230, 00:00:02.230",
@@ -251,7 +240,9 @@ public class TimestampConverterTests {
         tsConverter.converterFor(mockColumn, mockRegistration);
 
         Object actualResult = mockRegistration._converter.convert(input);
-        if (actualResult != null) { assertEquals(expectedResult, actualResult); }
+        if (actualResult != null) {
+            assertEquals(expectedResult, actualResult);
+        }
     }
 
     RelationalColumn getMockColumn(String type) {
@@ -569,5 +560,16 @@ public class TimestampConverterTests {
                 return null;
             }
         };
+    }
+
+    private static class MockRegistration<S> implements ConverterRegistration<S> {
+        public Converter _converter;
+        public S _schema;
+
+        @Override
+        public void register(S fieldSchema, Converter converter) {
+            _converter = converter;
+            _schema = fieldSchema;
+        }
     }
 }
