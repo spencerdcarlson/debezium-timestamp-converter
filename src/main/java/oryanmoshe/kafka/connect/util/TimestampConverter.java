@@ -86,7 +86,7 @@ public class TimestampConverter implements CustomConverter<SchemaBuilder, Relati
                     instant = parseEpoch(value);
                 }
                 if (instant == null) {
-                    return rawValue.toString();
+                    return value;
                 }
                 LOGGER.debug("instant: {}", instant);
                 switch (column.typeName().toLowerCase()) {

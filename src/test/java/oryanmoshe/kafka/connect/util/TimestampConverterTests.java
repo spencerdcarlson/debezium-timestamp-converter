@@ -24,7 +24,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2021-11-18 04:09:44.795307";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
+        props.putAll(Map.of("format.datetime", format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -57,7 +57,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2021-11-19 15:25:53.919906";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
+        props.putAll(Map.of("format.datetime", format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -80,7 +80,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2020-04-16";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
+        props.putAll(Map.of("format.datetime", format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);
@@ -113,7 +113,7 @@ public class TimestampConverterTests {
         final String expectedResult = "2020-04-16";
 
         final Properties props = new Properties();
-        props.putAll(Map.of(String.format("format.%s", "datetime"), format, "debug", "true"));
+        props.putAll(Map.of("format.datetime", format, "debug", "true"));
 
         final TimestampConverter tsConverter = new TimestampConverter();
         tsConverter.configure(props);

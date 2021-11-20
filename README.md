@@ -21,6 +21,17 @@ There are a few configuration settings you can add, here are their default value
 ```json
 "timestampConverter.format.time": "HH:mm:ss.SSS",
 "timestampConverter.format.date": "YYYY-MM-dd",
-"timestampConverter.format.datetime": "YYYY-MM-dd'T'HH:mm:ss.SSS'Z'",
-"timestampConverter.debug": "false"
+"timestampConverter.format.datetime": "YYYY-MM-dd'T'HH:mm:ss.SSS'Z'"
+```
+
+### Logging
+Enable DEBUG logging
+```properties
+log4j.logger.oryanmoshe.kafka.connect.util=DEBUG
+```
+
+### Testing
+```bash
+mvn test && \
+  cat target/surefire-reports/oryanmoshe.kafka.connect.util.TimestampConverterTests-output.txt
 ```
